@@ -7,7 +7,7 @@ class ForecastGame {
         this.currentForecast = null;
         this.forecasts = this.loadForecasts();
         this.leaderboard = this.loadLeaderboard();
-        this.playerName = localStorage.getItem('playerName') || 'Forecaster';
+        this.playerName = this.sanitize(localStorage.getItem('playerName') || 'Forecaster');
         this.drawingMode = false;
         this.currentHazard = 'tornado';
         this.currentProb = 5;
@@ -240,7 +240,7 @@ class ForecastGame {
         document.getElementById('toggleGameBtn').addEventListener('click', () => this.toggleGame());
 
         document.getElementById('playerNameInput').addEventListener('change', (e) => {
-            this.playerName = e.target.value || 'Forecaster';
+            this.playerName = this.sanitize(e.target.value || 'Forecaster');
             localStorage.setItem('playerName', this.playerName);
         });
 
@@ -865,10 +865,16 @@ class ForecastGame {
         list.innerHTML = sorted.slice(0, 10).map((entry, i) => `
             <div class="leaderboard-entry ${entry.player === this.playerName ? 'current-player' : ''}">
                 <span class="rank">#${i + 1}</span>
-                <span class="name">${entry.player}</span>
+                <span class="name">${this.sanitize(entry.player)}</span>
                 <span class="score">${entry.avgScore} avg</span>
             </div>
         `).join('');
+    }
+
+    sanitize(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     loadForecasts() {
