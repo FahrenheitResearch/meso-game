@@ -233,8 +233,8 @@ const OVERLAYS = {
     hwy: { name: "Highways & Cities", file: "hiway" },
     artcc: { name: "ARTCC Regions", file: "artcc" },
     warn: { name: "NWS Watches/Warnings", file: "warns" },
-    dy1: { name: "SPC Day1 Outlook", file: "otlk" },
-    rpts: { name: "Storm Reports", file: "rpts" }
+    dy1: { name: "SPC Day1 Outlook", file: "otlk" }
+    // Note: Storm reports overlay (rpts) removed - SPC blocks direct access
 };
 
 // Underlay definitions

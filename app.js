@@ -439,8 +439,7 @@ class MesoanalysisApp {
             hwy: 'hiway/hiway',
             artcc: 'artcc/artcc',
             warn: 'warns/warns',
-            dy1: 'otlk/otlk',
-            rpts: 'rpts/rpts'
+            dy1: 'otlk/otlk'
         };
         const path = overlayMap[overlay] || `${overlay}/${overlay}`;
         return `${SPC_BASE_URL}/s${sector}/${path}.gif?${timestamp}`;
@@ -537,7 +536,7 @@ class MesoanalysisApp {
 
         // Overlays that don't work for historic mode (they show current data)
         // Note: dy1 now works for 2003+ via SPC archive
-        const currentOnlyOverlays = ['warn', 'rpts', 'wch'];
+        const currentOnlyOverlays = ['warn', 'wch'];
 
         // Load active overlays
         let imgIndex = 0;
