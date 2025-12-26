@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPC Mesoscale Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-top">
+            <div class="noaa-banner">
+                <img src="https://www.spc.noaa.gov/images/site/nwslogo.png" alt="NWS Logo" class="nws-logo">
+                <div class="header-text">
+                    <span class="noaa-text">NOAA / National Weather Service</span>
+                    <span class="spc-text">Storm Prediction Center</span>
+                </div>
+            </div>
+            <nav class="header-nav">
+                <a href="#">Site Map</a>
+                <a href="#">News</a>
+                <a href="#">Organization</a>
+            </nav>
+        </div>
+        <div class="header-main">
+            <h1>SPC Hourly Mesoscale Analysis</h1>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="controls-panel">
+            <!-- Sector Selection -->
+            <section class="control-section">
+                <h3>Sector</h3>
+                <div class="sector-grid" id="sectorGrid">
+                    <button class="sector-btn" data-sector="19">National</button>
+                    <button class="sector-btn" data-sector="11">Northwest</button>
+                    <button class="sector-btn" data-sector="12">Southwest</button>
+                    <button class="sector-btn" data-sector="22">Great Basin</button>
+                    <button class="sector-btn" data-sector="13">No. Plains</button>
+                    <button class="sector-btn active" data-sector="14">Central Plains</button>
+                    <button class="sector-btn" data-sector="15">So. Plains</button>
+                    <button class="sector-btn" data-sector="20">Midwest</button>
+                    <button class="sector-btn" data-sector="21">Great Lakes</button>
+                    <button class="sector-btn" data-sector="16">Northeast</button>
+                    <button class="sector-btn" data-sector="17">Mid-Atlantic</button>
+                    <button class="sector-btn" data-sector="18">Southeast</button>
+                </div>
+            </section>
+
+            <!-- Parameter Categories -->
+            <section class="control-section">
+                <h3>Parameters</h3>
+                <div class="param-categories" id="paramCategories">
+                    <div class="param-category">
+                        <button class="category-btn" data-category="obs">Observations</button>
+                        <div class="param-list" id="params-obs"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="sfc">Surface</button>
+                        <div class="param-list" id="params-sfc"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="upper">Upper Air</button>
+                        <div class="param-list" id="params-upper"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="thermo">Thermodynamics</button>
+                        <div class="param-list" id="params-thermo"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="shear">Wind Shear</button>
+                        <div class="param-list" id="params-shear"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="comp">Composite Indices</button>
+                        <div class="param-list" id="params-comp"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="multi">Multi-Parameter Fields</button>
+                        <div class="param-list" id="params-multi"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="rain">Heavy Rain</button>
+                        <div class="param-list" id="params-rain"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="winter">Winter Weather</button>
+                        <div class="param-list" id="params-winter"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="fire">Fire Weather</button>
+                        <div class="param-list" id="params-fire"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="classic">Classic</button>
+                        <div class="param-list" id="params-classic"></div>
+                    </div>
+                    <div class="param-category">
+                        <button class="category-btn" data-category="beta">Beta</button>
+                        <div class="param-list" id="params-beta"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Overlays -->
+            <section class="control-section">
+                <h3>Overlays</h3>
+                <div class="overlay-options" id="overlayOptions">
+                    <label><input type="checkbox" name="overlay" value="cnty" checked> County Boundaries</label>
+                    <label><input type="checkbox" name="overlay" value="cwa"> County Warning Areas</label>
+                    <label><input type="checkbox" name="overlay" value="hwy"> Highways & Cities</label>
+                    <label><input type="checkbox" name="overlay" value="artcc"> ARTCC Regions</label>
+                    <label><input type="checkbox" name="overlay" value="warn"> NWS Watches/Warnings</label>
+                    <label><input type="checkbox" name="overlay" value="dy1"> SPC Day1 Outlook</label>
+                    <label><input type="checkbox" name="overlay" value="rpts"> Storm Reports</label>
+                </div>
+            </section>
+
+            <!-- Underlays -->
+            <section class="control-section">
+                <h3>Underlays</h3>
+                <div class="underlay-options" id="underlayOptions">
+                    <label><input type="radio" name="underlay" value="none" checked> None</label>
+                    <label><input type="radio" name="underlay" value="rad"> Radar</label>
+                    <label><input type="radio" name="underlay" value="topo"> Terrain</label>
+                    <label><input type="radio" name="underlay" value="pop"> Population</label>
+                    <label><input type="radio" name="underlay" value="sfc"> Surface Obs</label>
+                </div>
+                <div class="underlay-opacity">
+                    <label>Opacity: <input type="range" id="underlayOpacity" min="0" max="100" value="50"></label>
+                </div>
+            </section>
+
+            <!-- Historic Outbreaks -->
+            <section class="control-section">
+                <h3>Tornado Outbreaks</h3>
+                <div class="outbreak-options">
+                    <select id="outbreakSelect">
+                        <option value="">-- Select Outbreak --</option>
+                        <option value="2112102100">Dec 10, 2021 - Quad-State (Mayfield EF4)</option>
+                        <option value="2112110300">Dec 11, 2021 - Quad-State Day 2</option>
+                        <option value="2303312000">Mar 31, 2023 - Little Rock EF4</option>
+                        <option value="2404272100">Apr 27, 2024 - Nebraska/Iowa</option>
+                        <option value="2405122200">May 12, 2024 - Kansas/Texas</option>
+                        <option value="2203262100">Mar 26, 2022 - New Orleans EF3</option>
+                        <option value="2204052100">Apr 5, 2022 - Georgia/S Carolina</option>
+                        <option value="2304262200">Apr 26, 2023 - Kansas/Oklahoma</option>
+                        <option value="2305062300">May 6, 2023 - Oklahoma Outbreak</option>
+                        <option value="2405212300">May 21, 2024 - Iowa (Greenfield EF4)</option>
+                    </select>
+                    <div class="outbreak-hours" id="outbreakHours"></div>
+                </div>
+            </section>
+
+            <!-- Time Controls -->
+            <section class="control-section">
+                <h3>Time / Animation</h3>
+                <div class="time-controls">
+                    <select id="timeOffset">
+                        <option value="-24">-24 hours</option>
+                        <option value="-12">-12 hours</option>
+                        <option value="-6">-6 hours</option>
+                        <option value="-4">-4 hours</option>
+                        <option value="-3">-3 hours</option>
+                        <option value="-2">-2 hours</option>
+                        <option value="-1">-1 hour</option>
+                        <option value="0" selected>Current</option>
+                    </select>
+                    <div class="animation-controls">
+                        <button id="loopBtn" class="anim-btn">▶ Loop</button>
+                        <button id="stopBtn" class="anim-btn">⬛ Stop</button>
+                        <button id="prevBtn" class="anim-btn">◀ Prev</button>
+                        <button id="nextBtn" class="anim-btn">Next ▶</button>
+                    </div>
+                    <div class="loop-settings">
+                        <label>Speed: <input type="range" id="loopSpeed" min="100" max="2000" value="500"></label>
+                        <label>Frames: <input type="number" id="loopFrames" min="2" max="24" value="6"></label>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="map-container">
+            <div class="map-info">
+                <span id="currentParam">Surface-Based CAPE</span>
+                <span id="currentTime">Valid: Loading...</span>
+            </div>
+            <div class="map-wrapper" id="mapWrapper">
+                <img id="underlayImg" class="map-layer underlay" src="" alt="">
+                <img id="paramImg" class="map-layer param" src="" alt="Parameter Map">
+                <img id="overlayImg1" class="map-layer overlay" src="" alt="">
+                <img id="overlayImg2" class="map-layer overlay" src="" alt="">
+                <img id="overlayImg3" class="map-layer overlay" src="" alt="">
+                <img id="overlayImg4" class="map-layer overlay" src="" alt="">
+                <img id="overlayImg5" class="map-layer overlay" src="" alt="">
+                <img id="overlayImg6" class="map-layer overlay" src="" alt="">
+            </div>
+            <div class="map-legend" id="mapLegend"></div>
+            <div class="map-scale-bar">
+                <span class="scale-label" id="scaleLabel">Scale/Legend loaded from SPC</span>
+            </div>
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        <p>Mesoanalysis Clone - Data from NOAA/NWS Storm Prediction Center</p>
+        <p><a href="https://www.spc.noaa.gov/exper/mesoanalysis/" target="_blank">Original SPC Mesoanalysis</a></p>
+    </footer>
+
+    <script src="params.js"></script>
+    <script src="legends.js"></script>
+    <script src="app.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
