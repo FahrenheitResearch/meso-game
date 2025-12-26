@@ -1,0 +1,22 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local development
+node_modules/
+.env
+.env.local
+
+# Build artifacts
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
