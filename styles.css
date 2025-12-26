@@ -837,6 +837,7 @@ body {
 
 .map-layer.param {
     z-index: 10;
+    transition: opacity 0.15s ease-in-out;
 }
 
 .map-layer.overlay {
@@ -1023,4 +1024,44 @@ body {
         font-size: 9px;
         padding: 4px;
     }
+}
+
+/* Historic Mode Indicator */
+.historic-indicator {
+    background: linear-gradient(to bottom, #8B4513, #654321);
+    color: #fff;
+    padding: 8px 12px;
+    text-align: center;
+    border-radius: 3px;
+    margin-bottom: 10px;
+    border: 2px solid #D2691E;
+}
+
+.historic-indicator span {
+    display: block;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.historic-indicator small {
+    display: block;
+    font-size: 10px;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+/* Unavailable parameters in historic mode */
+.param-item.unavailable {
+    opacity: 0.4;
+    pointer-events: none;
+    text-decoration: line-through;
+}
+
+/* Historic mode body styling */
+body.historic-mode .controls-panel {
+    border-color: #D2691E;
+}
+
+body.historic-mode .control-section h3 {
+    color: #8B4513;
 }

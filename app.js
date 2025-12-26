@@ -9,6 +9,8 @@ class MesoanalysisApp {
         this.timeOffset = 0;
         this.historicDate = null; // YYMMDDHH format for outbreak viewing
         this.historicHourOffset = 0;
+        this.useNarrServer = false; // Whether to use NARR server for pre-2020 data
+        this.narrServerAvailable = false; // Whether NARR server is running
         this.isLooping = false;
         this.loopInterval = null;
         this.loopFrames = 6;
@@ -44,8 +46,42 @@ class MesoanalysisApp {
         this.setupOutbreakControls();
         this.setupTimeControls();
         this.setupAnimationControls();
+        this.checkNarrServer();
         this.loadCurrentImage();
         this.updateTimeDisplay();
+    }
+
+    // Check if NARR server is available
+    async checkNarrServer() {
+        try {
+            const response = await fetch(`${NARR_SERVER_URL}/health`, {
+                method: 'GET',
+                mode: 'cors',
+                timeout: 3000
+            });
+            if (response.ok) {
+                this.narrServerAvailable = true;
+                console.log('NARR server available for historic data');
+            }
+        } catch (e) {
+            this.narrServerAvailable = false;
+            console.log('NARR server not available - historic data limited to SPC archive (~5 years)');
+        }
+    }
+
+    // Check if a date requires NARR server (pre-2020)
+    isPreSpcArchive(dateStr) {
+        // dateStr format: YYMMDDHH
+        const yy = parseInt(dateStr.slice(0, 2));
+        // Handle century - 90+ is 1990s, <90 is 2000s
+        const year = yy >= 90 ? 1900 + yy : 2000 + yy;
+        // SPC archive goes back to roughly mid-2020
+        return year < 2020;
+    }
+
+    // Check if parameter is available from NARR
+    isNarrParam(param) {
+        return typeof NARR_PARAMS !== 'undefined' && NARR_PARAMS[param];
     }
 
     // Sector Selection
@@ -112,6 +148,66 @@ class MesoanalysisApp {
         }
     }
 
+    // Filter parameters based on historic mode
+    updateParamAvailability() {
+        const isHistoric = this.historicDate && this.isPreSpcArchive(this.historicDate);
+        const paramItems = document.querySelectorAll('.param-item');
+        const categories = document.querySelectorAll('.param-category');
+
+        // Add/remove historic mode class to body for styling
+        document.body.classList.toggle('historic-mode', isHistoric && this.narrServerAvailable);
+
+        paramItems.forEach(item => {
+            const code = item.dataset.code;
+            const isAvailable = !isHistoric || !this.narrServerAvailable || this.isNarrParam(code);
+
+            item.classList.toggle('unavailable', !isAvailable);
+            item.style.display = isHistoric && !isAvailable ? 'none' : '';
+        });
+
+        // Hide empty categories
+        categories.forEach(cat => {
+            const list = cat.querySelector('.param-list');
+            const visibleItems = list ? list.querySelectorAll('.param-item:not([style*="display: none"])') : [];
+            cat.style.display = visibleItems.length === 0 ? 'none' : '';
+        });
+
+        // If current param is not available, switch to sbcp
+        if (isHistoric && this.narrServerAvailable && !this.isNarrParam(this.currentParam)) {
+            const sbcpItem = document.querySelector('[data-code="sbcp"]');
+            if (sbcpItem) {
+                document.querySelectorAll('.param-item').forEach(p => p.classList.remove('active'));
+                sbcpItem.classList.add('active');
+                this.currentParam = 'sbcp';
+                this.currentParamName = 'CAPE - Surface-Based';
+            }
+        }
+
+        // Update historic mode indicator
+        this.updateHistoricIndicator(isHistoric);
+    }
+
+    // Show/hide historic mode indicator
+    updateHistoricIndicator(isHistoric) {
+        let indicator = document.getElementById('historicIndicator');
+
+        if (isHistoric && this.narrServerAvailable) {
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'historicIndicator';
+                indicator.className = 'historic-indicator';
+                indicator.innerHTML = '<span>NARR Historic Mode</span><small>Limited parameters available</small>';
+                const controlsPanel = document.querySelector('.controls-panel');
+                if (controlsPanel) {
+                    controlsPanel.insertBefore(indicator, controlsPanel.firstChild);
+                }
+            }
+            indicator.style.display = 'block';
+        } else if (indicator) {
+            indicator.style.display = 'none';
+        }
+    }
+
     // Overlay Controls
     setupOverlayControls() {
         const checkboxes = document.querySelectorAll('#overlayOptions input[type="checkbox"]');
@@ -159,12 +255,14 @@ class MesoanalysisApp {
                 this.historicDate = dateStr;
                 this.historicHourOffset = 0;
                 this.generateOutbreakHourButtons(dateStr);
+                this.updateParamAvailability();
                 this.loadCurrentImage();
                 this.updateTimeDisplay();
             } else {
                 this.historicDate = null;
                 this.historicHourOffset = 0;
                 outbreakHours.innerHTML = '';
+                this.updateParamAvailability();
                 this.loadCurrentImage();
                 this.updateTimeDisplay();
             }
@@ -200,6 +298,7 @@ class MesoanalysisApp {
             this.historicDate = null;
             this.historicHourOffset = 0;
             outbreakHours.innerHTML = '';
+            this.updateParamAvailability();
             this.loadCurrentImage();
             this.updateTimeDisplay();
         });
@@ -245,15 +344,31 @@ class MesoanalysisApp {
 
     // Build image URL
     // SPC URL pattern: https://www.spc.noaa.gov/exper/mesoanalysis/s{sector}/{param}/{param}.gif
+    // NARR URL pattern: http://localhost:5000/mesoanalysis/{param}/{YYYYMMDDHH}?sector={sector}
     buildImageUrl(param, sector, hourOffset = 0) {
         const timestamp = new Date().getTime();
 
         // If viewing historic outbreak
         if (this.historicDate) {
-            const dateStr = this.adjustHistoricDate(this.historicDate, this.historicHourOffset);
+            // Combine base offset with any additional offset (for loops)
+            const totalOffset = this.historicHourOffset + hourOffset;
+            const dateStr = this.adjustHistoricDate(this.historicDate, totalOffset);
+
+            // Check if we should use NARR server for pre-2020 data
+            if (this.isPreSpcArchive(dateStr) && this.narrServerAvailable && this.isNarrParam(param)) {
+                this.useNarrServer = true;
+                // Convert YYMMDDHH to YYYYMMDDHH
+                const yy = parseInt(dateStr.slice(0, 2));
+                const century = yy >= 90 ? '19' : '20';
+                const fullDate = century + dateStr;
+                return `${NARR_SERVER_URL}/mesoanalysis/${param}/${fullDate}?sector=${sector}`;
+            }
+
+            this.useNarrServer = false;
             return `${SPC_BASE_URL}/s${sector}/${param}/${param}_${dateStr}.gif?${timestamp}`;
         }
 
+        this.useNarrServer = false;
         if (hourOffset === 0) {
             // Current time: /exper/mesoanalysis/s{sector}/{param}/{param}.gif
             return `${SPC_BASE_URL}/s${sector}/${param}/${param}.gif?${timestamp}`;
@@ -277,7 +392,9 @@ class MesoanalysisApp {
         const dd = parseInt(baseDateStr.slice(4, 6));
         const hh = parseInt(baseDateStr.slice(6, 8));
 
-        const date = new Date(2000 + yy, mm, dd, hh);
+        // Handle century - 90+ is 1990s, <90 is 2000s
+        const fullYear = yy >= 90 ? 1900 + yy : 2000 + yy;
+        const date = new Date(fullYear, mm, dd, hh);
         date.setHours(date.getHours() + hourOffset);
 
         const newYY = date.getFullYear().toString().slice(-2);
@@ -291,6 +408,31 @@ class MesoanalysisApp {
     // Build overlay URL
     buildOverlayUrl(overlay, sector) {
         const timestamp = new Date().getTime();
+
+        // For Day 1 outlook in historic mode, try to fetch archived outlook
+        if (overlay === 'dy1' && this.historicDate) {
+            const dateStr = this.adjustHistoricDate(this.historicDate, this.historicHourOffset);
+            const yy = parseInt(dateStr.slice(0, 2));
+            const fullYear = yy >= 90 ? 1900 + yy : 2000 + yy;
+
+            // SPC outlook archive goes back to 2003
+            if (fullYear >= 2003) {
+                const mm = dateStr.slice(2, 4);
+                const dd = dateStr.slice(4, 6);
+                const hh = dateStr.slice(6, 8);
+                // Find nearest outlook time (outlooks issued at 0600, 1300, 1630, 2000Z)
+                const hour = parseInt(hh);
+                let outlookTime;
+                if (hour < 10) outlookTime = '0600';
+                else if (hour < 15) outlookTime = '1300';
+                else if (hour < 18) outlookTime = '1630';
+                else outlookTime = '2000';
+                return `https://www.spc.noaa.gov/products/outlook/archive/${fullYear}/day1otlk_${fullYear}${mm}${dd}_${outlookTime}.gif?${timestamp}`;
+            }
+            // Pre-2003: no archived outlooks available
+            return '';
+        }
+
         const overlayMap = {
             cnty: 'cnty/cnty',
             cwa: 'cwa/cwa',
@@ -322,14 +464,27 @@ class MesoanalysisApp {
     loadCurrentImage() {
         this.mapWrapper.classList.add('loading');
 
+        // Check if pre-2020 outbreak without NARR server
+        if (this.historicDate && this.isPreSpcArchive(this.historicDate) && !this.narrServerAvailable) {
+            this.showNarrRequiredMessage();
+            return;
+        }
+
         const url = this.buildImageUrl(this.currentParam, this.currentSector, this.timeOffset);
+        const isHistoric = this.historicDate && this.isPreSpcArchive(this.historicDate);
+
+        // Clear current image immediately to prevent flash when switching modes
+        this.paramImg.style.opacity = '0';
 
         this.paramImg.onload = () => {
+            this.paramImg.style.opacity = '1';
             this.mapWrapper.classList.remove('loading');
+            this.hideNarrMessage();
             this.updateLegend();
         };
 
         this.paramImg.onerror = () => {
+            this.paramImg.style.opacity = '1';
             this.mapWrapper.classList.remove('loading');
             console.error('Failed to load image:', url);
             // Try without time offset
@@ -339,31 +494,85 @@ class MesoanalysisApp {
         };
 
         this.paramImg.src = url;
-        this.currentParamEl.textContent = this.currentParamName;
-        this.updateOverlays();
-        this.updateUnderlay();
+        this.currentParamEl.textContent = this.currentParamName + (this.useNarrServer ? ' (NARR)' : '');
+        this.updateOverlays(isHistoric);
+        this.updateUnderlay(isHistoric);
+    }
+
+    // Show message when NARR server is required
+    showNarrRequiredMessage() {
+        this.mapWrapper.classList.remove('loading');
+        let msg = document.getElementById('narrMessage');
+        if (!msg) {
+            msg = document.createElement('div');
+            msg.id = 'narrMessage';
+            msg.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff3cd;border:2px solid #ffc107;padding:20px;border-radius:8px;text-align:center;z-index:100;max-width:80%;';
+            msg.innerHTML = `
+                <h3 style="margin:0 0 10px 0;color:#856404;">NARR Server Required</h3>
+                <p style="margin:0 0 10px 0;color:#856404;">This classic outbreak (pre-2020) requires the NARR data server.</p>
+                <p style="margin:0;font-size:12px;color:#666;">
+                    Run: <code style="background:#eee;padding:2px 6px;border-radius:3px;">cd server && python app.py</code><br>
+                    Then refresh this page.
+                </p>
+            `;
+            this.mapWrapper.appendChild(msg);
+        }
+        msg.style.display = 'block';
+        this.paramImg.src = '';
+    }
+
+    // Hide NARR required message
+    hideNarrMessage() {
+        const msg = document.getElementById('narrMessage');
+        if (msg) msg.style.display = 'none';
     }
 
     // Update overlays
-    updateOverlays() {
+    updateOverlays(isHistoric = false) {
         // Hide all overlay images first
         this.overlayImgs.forEach(img => {
             img.src = '';
             img.style.display = 'none';
         });
 
+        // Overlays that don't work for historic mode (they show current data)
+        // Note: dy1 now works for 2003+ via SPC archive
+        const currentOnlyOverlays = ['warn', 'rpts', 'wch'];
+
         // Load active overlays
-        this.activeOverlays.forEach((overlay, index) => {
-            if (index < this.overlayImgs.length) {
+        let imgIndex = 0;
+        this.activeOverlays.forEach((overlay) => {
+            // Skip current-only overlays in historic mode
+            if (isHistoric && currentOnlyOverlays.includes(overlay)) {
+                return;
+            }
+            if (imgIndex < this.overlayImgs.length) {
                 const url = this.buildOverlayUrl(overlay, this.currentSector);
-                this.overlayImgs[index].src = url;
-                this.overlayImgs[index].style.display = 'block';
+                // Skip if URL is empty (e.g., pre-2003 outlook)
+                if (!url) return;
+                this.overlayImgs[imgIndex].src = url;
+                this.overlayImgs[imgIndex].style.display = 'block';
+                imgIndex++;
+            }
+        });
+
+        // Update overlay checkboxes to show unavailable state in historic mode
+        const overlayCheckboxes = document.querySelectorAll('#overlayOptions input[type="checkbox"]');
+        overlayCheckboxes.forEach(cb => {
+            const overlay = cb.value;
+            const label = cb.parentElement;
+            if (isHistoric && currentOnlyOverlays.includes(overlay)) {
+                label.style.opacity = '0.5';
+                label.title = 'Not available for historic outbreaks';
+            } else {
+                label.style.opacity = '1';
+                label.title = '';
             }
         });
     }
 
     // Update underlay
-    updateUnderlay() {
+    updateUnderlay(isHistoric = false) {
         const url = this.buildUnderlayUrl(this.activeUnderlay, this.currentSector);
         if (url) {
             this.underlayImg.src = url;
@@ -429,10 +638,18 @@ class MesoanalysisApp {
         this.currentLoopFrame = 0;
 
         // Preload frames
+        // NARR has 3-hourly data, so use 3-hour steps for pre-2020 historic
+        const isNarrMode = this.historicDate &&
+                           this.isPreSpcArchive(this.historicDate) &&
+                           this.narrServerAvailable;
+        const stepSize = isNarrMode ? 3 : 1;
+
         this.loopFrameUrls = [];
+        this.loopFrameOffsets = [];
         for (let i = 0; i < this.loopFrames; i++) {
-            const offset = -i;
+            const offset = -i * stepSize;
             this.loopFrameUrls.push(this.buildImageUrl(this.currentParam, this.currentSector, offset));
+            this.loopFrameOffsets.push(offset);
         }
 
         // Preload images
@@ -446,9 +663,22 @@ class MesoanalysisApp {
             this.paramImg.src = this.loopFrameUrls[this.currentLoopFrame];
 
             // Update time display for current frame
-            const now = new Date();
-            now.setMinutes(0, 0, 0);
-            now.setHours(now.getHours() - this.currentLoopFrame);
+            const currentOffset = this.loopFrameOffsets[this.currentLoopFrame];
+            let displayDate;
+            if (this.historicDate) {
+                // Historic mode - calculate date from historic base
+                const dateStr = this.adjustHistoricDate(this.historicDate, this.historicHourOffset + currentOffset);
+                const yy = parseInt(dateStr.slice(0, 2));
+                const fullYear = yy >= 90 ? 1900 + yy : 2000 + yy;
+                displayDate = new Date(fullYear,
+                    parseInt(dateStr.slice(2, 4)) - 1,
+                    parseInt(dateStr.slice(4, 6)),
+                    parseInt(dateStr.slice(6, 8)));
+            } else {
+                displayDate = new Date();
+                displayDate.setMinutes(0, 0, 0);
+                displayDate.setHours(displayDate.getHours() + currentOffset);
+            }
             const options = {
                 weekday: 'short',
                 month: 'short',
@@ -457,7 +687,8 @@ class MesoanalysisApp {
                 minute: '2-digit',
                 timeZoneName: 'short'
             };
-            this.currentTimeEl.textContent = `Valid: ${now.toLocaleString('en-US', options)}`;
+            const prefix = this.historicDate ? 'HISTORIC - ' : '';
+            this.currentTimeEl.textContent = `${prefix}Valid: ${displayDate.toLocaleString('en-US', options)}`;
         }, this.loopSpeed);
     }
 

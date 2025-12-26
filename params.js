@@ -249,7 +249,80 @@ const UNDERLAYS = {
 // Base URL for SPC imagery
 const SPC_BASE_URL = "https://www.spc.noaa.gov/exper/mesoanalysis";
 
+// NARR server for historic data (pre-2020)
+// Set this to your local server URL when running the NARR server
+const NARR_SERVER_URL = "http://localhost:5000";
+
+// Parameters available from NARR server (pre-2020 historic data)
+//
+// IMPORTANT: NARR has limited derived products compared to SPC realtime.
+// Many SPC params that look different are actually the SAME underlying NARR data:
+//   - ALL CAPE variants (sbcp/mlcp/mucp) → single NARR 'cape' field
+//   - ALL SRH variants (srh1/srh3/srh5/effh) → single NARR 'hlcy' (0-3km only)
+//   - ALL shear variants (shr1/shr3/shr6/shr8/eshr/brns) → single NARR 'vwsh'
+//   - Lapse rates (laps/lllr) → using 'lftx4' as proxy (not actual lapse rates)
+//
+// We only expose DISTINCT parameters to avoid confusion:
+
+const NARR_PARAMS = {
+    // ===== THERMODYNAMICS (distinct fields) =====
+    'sbcp': true,   // CAPE (NARR single field - represents all CAPE types)
+    'ncin': true,   // CIN
+    'muli': true,   // Surface Lifted Index
+
+    // ===== HELICITY (single NARR field) =====
+    'srh3': true,   // 0-3km SRH (NARR only has 0-3km helicity)
+
+    // ===== MOISTURE (distinct fields) =====
+    'pwtr': true,   // Precipitable Water
+    'dwpt': true,   // Surface Dewpoint
+    'mcon': true,   // Moisture Convergence
+    'mixr': true,   // Mixing Ratio (specific humidity)
+
+    // ===== WIND/SHEAR (single NARR shear field) =====
+    'shr6': true,   // Bulk Shear (NARR has single vertical shear field)
+
+    // ===== SURFACE (distinct fields) =====
+    'pmsl': true,   // MSL Pressure
+    'temp': true,   // Surface Temperature
+
+    // ===== BOUNDARY LAYER =====
+    'pblh': true,   // PBL Height
+
+    // ===== CLOUDS (distinct fields) =====
+    'tcdc': true,   // Total Cloud Cover
+    'lcdc': true,   // Low Cloud Cover
+    'mcdc': true,   // Mid Cloud Cover
+    'hcdc': true,   // High Cloud Cover
+
+    // ===== FIRE/SURFACE =====
+    'sfir': true,   // Surface RH
+
+    // ===== DIRECT NARR VARIABLES =====
+    // These are the actual distinct NARR fields available:
+    'cape': true,
+    'cin': true,
+    'hlcy': true,
+    'lftx4': true,
+    'pr_wtr': true,
+    'dpt': true,
+    'air': true,
+    'rhum': true,
+    'hpbl': true,
+    'mconv': true,
+    'vwsh': true,
+    'mslet': true,
+    'ustm': true,
+    'vstm': true,
+    'uwnd': true,
+    'vwnd': true,
+    'shum': true,
+    'pres': true,
+    'vis': true,
+    'tke': true,
+};
+
 // Export for use in app.js
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { PARAMETERS, SECTORS, OVERLAYS, UNDERLAYS, SPC_BASE_URL };
+    module.exports = { PARAMETERS, SECTORS, OVERLAYS, UNDERLAYS, SPC_BASE_URL, NARR_SERVER_URL, NARR_PARAMS };
 }

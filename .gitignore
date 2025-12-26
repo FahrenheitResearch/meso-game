@@ -20,3 +20,16 @@ build/
 # Logs
 *.log
 npm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# NARR Server
+server/cache/
+server/__pycache__/
